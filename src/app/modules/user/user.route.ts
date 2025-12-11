@@ -15,8 +15,14 @@ router.get("/all-users", checkAuth(Role.ADMIN), UserControllers.getAllUsers);
 
 router.get("/me", checkAuth(...Object.values(Role)), UserControllers.getMe);
 
-router.patch(
+router.get(
   "/:id",
+  checkAuth(...Object.values(Role)),
+  UserControllers.getUserById
+);
+
+router.patch(
+  "/:updateMe",
   checkAuth(...Object.values(Role)), // Only authenticated users
   fileUploader.upload.single("file"), // Handle file upload
   (req: Request, res: Response, next: NextFunction) => {

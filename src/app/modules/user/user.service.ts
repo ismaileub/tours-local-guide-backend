@@ -67,62 +67,9 @@ const createUser = async (payload: Partial<IUser>) => {
   return user;
 };
 
-// const updateUser = async (
-//   userId: string,
-//   payload: Partial<IUser>,
-//   decodedToken: JwtPayload
-// ) => {
-//   const existingUser = await User.findById(userId);
-
-//   if (!existingUser) {
-//     throw new AppError(httpStatus.NOT_FOUND, "User not found");
-//   }
-
-//   const isSelfUpdate = decodedToken._id === userId;
-//   const isAdmin = decodedToken.role === Role.ADMIN;
-
-//   // Disallow email update
-//   if (payload.email && payload.email !== existingUser.email) {
-//     throw new AppError(httpStatus.FORBIDDEN, "Email cannot be updated");
-//   }
-
-//   // Restrict role updates
-//   if (payload.role && payload.role !== existingUser.role) {
-//     if (!isAdmin) {
-//       throw new AppError(
-//         httpStatus.FORBIDDEN,
-//         "You are not authorized to change user role"
-//       );
-//     }
-//   }
-
-//   // Restrict who can update who
-//   if (!isSelfUpdate && !isAdmin) {
-//     throw new AppError(
-//       httpStatus.FORBIDDEN,
-//       "You can only update your own profile"
-//     );
-//   }
-
-//   // If password is being updated, hash it
-//   if (payload.password) {
-//     payload.password = await bcryptjs.hash(
-//       payload.password,
-//       Number(envVars.BCRYPT_SALT_ROUND)
-//     );
-//   }
-
-//   const updatedUser = await User.findByIdAndUpdate(userId, payload, {
-//     new: true,
-//     runValidators: true,
-//   });
-
-//   return updatedUser;
-// };
-
-export const updateUser = async (req: Request, user: JwtPayload) => {
-  const userId = req.params.id; // Get user ID from route
-  const payload = { ...req.body }; // All other fields
+const updateUser = async (req: Request, user: JwtPayload) => {
+  const userId = user.userId;
+  const payload = { ...req.body };
 
   const existingUser = await User.findById(userId);
 
@@ -133,7 +80,6 @@ export const updateUser = async (req: Request, user: JwtPayload) => {
   const isAdmin = user.role === Role.ADMIN;
   const isSelfUpdate = user._id?.toString() === existingUser._id.toString();
 
-  // Only admin or self can update
   if (!isSelfUpdate && !isAdmin) {
     throw new AppError(
       httpStatus.FORBIDDEN,
@@ -159,7 +105,7 @@ export const updateUser = async (req: Request, user: JwtPayload) => {
   const updatedUser = await User.findByIdAndUpdate(userId, payload, {
     new: true,
     runValidators: true,
-  });
+  }).select("-password");
 
   return updatedUser;
 };
@@ -202,11 +148,11 @@ const getMeInfo = async (email: string) => {
   return user;
 };
 
-const getReceiver = async (email: string) => {
-  const user = await User.findOne({ email }).select("-password");
+export const getUserById = async (id: string) => {
+  const user = await User.findById(id).select("-password");
 
   if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, "Receiver email not found");
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
   }
 
   return user;
@@ -217,5 +163,5 @@ export const UserServices = {
   getAllUsers,
   updateUser,
   getMeInfo,
-  getReceiver,
+  getUserById,
 };

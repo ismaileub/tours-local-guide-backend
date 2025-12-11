@@ -38,6 +38,7 @@ export const checkAuth =
 
       // Store user info in request for future use
       req.user = decoded;
+      console.log({ decoded });
 
       next();
     } catch (error) {
