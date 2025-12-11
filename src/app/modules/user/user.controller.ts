@@ -27,34 +27,40 @@ const createUser = catchAsync(
 );
 //
 //
-const updateUser = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {
-    const userId = req.params.id;
-    // const token = req.headers.authorization
-    // const verifiedToken = verifyToken(token as string, envVars.JWT_ACCESS_SECRET) as JwtPayload
+// const updateUser = catchAsync(
+//   async (req: Request, res: Response, next: NextFunction) => {
+//     const userId = req.params.id;
 
-    const verifiedToken = req.user;
+//     const verifiedToken = req.user;
 
-    const payload = req.body;
-    const user = await UserServices.updateUser(
-      userId,
-      payload,
-      verifiedToken as JwtPayload
-    );
+//     const payload = req.body;
+//     const user = await UserServices.updateUser(
+//       userId,
+//       payload,
+//       verifiedToken as JwtPayload
+//     );
 
-    // res.status(httpStatus.CREATED).json({
-    //     message: "User Created Successfully",
-    //     user
-    // })
+//     sendResponse(res, {
+//       success: true,
+//       statusCode: httpStatus.CREATED,
+//       message: "User Updated Successfully",
+//       data: user,
+//     });
+//   }
+// );
 
-    sendResponse(res, {
-      success: true,
-      statusCode: httpStatus.CREATED,
-      message: "User Updated Successfully",
-      data: user,
-    });
-  }
-);
+export const updateUser = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload;
+
+  const updatedUser = await UserServices.updateUser(req, user);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "User Updated Successfully",
+    data: updatedUser,
+  });
+});
 
 const getAllUsers = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {

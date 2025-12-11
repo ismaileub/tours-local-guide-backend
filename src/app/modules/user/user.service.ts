@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import bcryptjs from "bcryptjs";
 import httpStatus from "http-status-codes";
 import { JwtPayload } from "jsonwebtoken";
@@ -5,6 +6,8 @@ import { envVars } from "../../config/env";
 import AppError from "../../errorHelpers/AppError";
 import { IAuthProvider, IUser, Role } from "./user.interface";
 import { User } from "./user.model";
+import { fileUploader } from "../../helpers/fileUploader";
+import { Request } from "express";
 
 const createUser = async (payload: Partial<IUser>) => {
   // Check if body is missing
@@ -64,36 +67,73 @@ const createUser = async (payload: Partial<IUser>) => {
   return user;
 };
 
-const updateUser = async (
-  userId: string,
-  payload: Partial<IUser>,
-  decodedToken: JwtPayload
-) => {
+// const updateUser = async (
+//   userId: string,
+//   payload: Partial<IUser>,
+//   decodedToken: JwtPayload
+// ) => {
+//   const existingUser = await User.findById(userId);
+
+//   if (!existingUser) {
+//     throw new AppError(httpStatus.NOT_FOUND, "User not found");
+//   }
+
+//   const isSelfUpdate = decodedToken._id === userId;
+//   const isAdmin = decodedToken.role === Role.ADMIN;
+
+//   // Disallow email update
+//   if (payload.email && payload.email !== existingUser.email) {
+//     throw new AppError(httpStatus.FORBIDDEN, "Email cannot be updated");
+//   }
+
+//   // Restrict role updates
+//   if (payload.role && payload.role !== existingUser.role) {
+//     if (!isAdmin) {
+//       throw new AppError(
+//         httpStatus.FORBIDDEN,
+//         "You are not authorized to change user role"
+//       );
+//     }
+//   }
+
+//   // Restrict who can update who
+//   if (!isSelfUpdate && !isAdmin) {
+//     throw new AppError(
+//       httpStatus.FORBIDDEN,
+//       "You can only update your own profile"
+//     );
+//   }
+
+//   // If password is being updated, hash it
+//   if (payload.password) {
+//     payload.password = await bcryptjs.hash(
+//       payload.password,
+//       Number(envVars.BCRYPT_SALT_ROUND)
+//     );
+//   }
+
+//   const updatedUser = await User.findByIdAndUpdate(userId, payload, {
+//     new: true,
+//     runValidators: true,
+//   });
+
+//   return updatedUser;
+// };
+
+export const updateUser = async (req: Request, user: JwtPayload) => {
+  const userId = req.params.id; // Get user ID from route
+  const payload = { ...req.body }; // All other fields
+
   const existingUser = await User.findById(userId);
 
   if (!existingUser) {
     throw new AppError(httpStatus.NOT_FOUND, "User not found");
   }
 
-  const isSelfUpdate = decodedToken._id === userId;
-  const isAdmin = decodedToken.role === Role.ADMIN;
+  const isAdmin = user.role === Role.ADMIN;
+  const isSelfUpdate = user._id?.toString() === existingUser._id.toString();
 
-  // Disallow email update
-  if (payload.email && payload.email !== existingUser.email) {
-    throw new AppError(httpStatus.FORBIDDEN, "Email cannot be updated");
-  }
-
-  // Restrict role updates
-  if (payload.role && payload.role !== existingUser.role) {
-    if (!isAdmin) {
-      throw new AppError(
-        httpStatus.FORBIDDEN,
-        "You are not authorized to change user role"
-      );
-    }
-  }
-
-  // Restrict who can update who
+  // Only admin or self can update
   if (!isSelfUpdate && !isAdmin) {
     throw new AppError(
       httpStatus.FORBIDDEN,
@@ -101,7 +141,7 @@ const updateUser = async (
     );
   }
 
-  // If password is being updated, hash it
+  // Password → hash it
   if (payload.password) {
     payload.password = await bcryptjs.hash(
       payload.password,
@@ -109,6 +149,13 @@ const updateUser = async (
     );
   }
 
+  // File upload → Cloudinary
+  if (req.file) {
+    const uploadResult = await fileUploader.uploadToCloudinary(req.file);
+    payload.picture = uploadResult?.secure_url;
+  }
+
+  // Update user in DB
   const updatedUser = await User.findByIdAndUpdate(userId, payload, {
     new: true,
     runValidators: true,
