@@ -33,6 +33,4 @@ router.patch(
 
 router.delete("/:id", checkAuth(Role.GUIDE), TourControllers.deleteTour);
 
-export default router;
-
 export const TourRoutes = router;

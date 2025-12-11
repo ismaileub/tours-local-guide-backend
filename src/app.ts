@@ -10,6 +10,8 @@ import notFound from "./app/middlewares/notFound";
 import { AuthRoutes } from "./app/modules/auth/auth.routes";
 import { UserRoutes } from "./app/modules/user/user.route";
 import { TourRoutes } from "./app/modules/tour/tour.route";
+import { BookingRoutes } from "./app/modules/booking/booking.route";
+import { PaymentRoutes } from "./app/modules/booking/payment/payment.routes";
 
 const app = express();
 
@@ -37,6 +39,8 @@ app.use(
 app.use("/api/auth", AuthRoutes);
 app.use("/api/users", UserRoutes);
 app.use("/api/tours", TourRoutes);
+app.use("/api/booking", BookingRoutes);
+app.use("/api/payment", PaymentRoutes);
 
 app.get("/", (req: Request, res: Response) => {
   res.status(200).json({
