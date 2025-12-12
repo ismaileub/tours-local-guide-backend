@@ -1,6 +1,17 @@
 import { Schema, model } from "mongoose";
 import { ITour } from "./tour.interface";
 
+export enum TourType {
+  SEA_BEACH = "Sea Beach",
+  CITY_LIFE = "City Life",
+  VILLAGE_LIFE = "Village Life",
+  HILL_TRACKS = "Hill Tracks",
+  ADVENTURE = "Adventure",
+  HISTORICAL = "Historical Place",
+  RIVER_SIDE = "River Side",
+  NIGHTLIFE = "Nightlife",
+}
+
 const TourSchema = new Schema<ITour>(
   {
     guide: {
@@ -33,6 +44,12 @@ const TourSchema = new Schema<ITour>(
     },
     spots: {
       type: [String],
+    },
+
+    tourType: {
+      type: String,
+      enum: Object.values(TourType),
+      required: true,
     },
   },
   { timestamps: true }

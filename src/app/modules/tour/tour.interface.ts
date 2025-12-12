@@ -1,4 +1,5 @@
 import { Types } from "mongoose";
+import { TourType } from "./tour.model";
 
 export interface ITour {
   _id?: Types.ObjectId;
@@ -10,6 +11,7 @@ export interface ITour {
   description: string;
   coverPhoto?: string;
   spots?: string[];
+  tourType: TourType;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -22,4 +24,5 @@ export interface ITourInput {
   description: string;
   spots: string[];
   coverPhoto?: string;
+  tourType: TourType;
 }

@@ -25,11 +25,12 @@ router.post(
   }
 );
 
-router.patch(
-  "/:id",
-  checkAuth(Role.GUIDE), // only guide
-  TourControllers.updateTour
-);
+router.get("/", TourControllers.getAllTours);
+router.get("/my-tours", checkAuth(Role.GUIDE), TourControllers.getMyTours);
+
+router.get("/:id", TourControllers.getTourById);
+
+router.patch("/:id", checkAuth(Role.GUIDE), TourControllers.updateTour);
 
 router.delete("/:id", checkAuth(Role.GUIDE), TourControllers.deleteTour);
 

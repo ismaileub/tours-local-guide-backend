@@ -43,8 +43,46 @@ const deleteTour = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getTourById = catchAsync(async (req: Request, res: Response) => {
+  const tour = await TourServices.getTourById(req);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Tour fetched successfully",
+    data: tour,
+  });
+});
+
+const getAllTours = catchAsync(async (req: Request, res: Response) => {
+  const tours = await TourServices.getAllTours(req);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Tours fetched successfully",
+    data: tours,
+  });
+});
+
+const getMyTours = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload;
+
+  const tours = await TourServices.getMyTours(user);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "My tours fetched successfully",
+    data: tours,
+  });
+});
+
 export const TourControllers = {
   createTour,
   updateTour,
   deleteTour,
+  getTourById,
+  getAllTours,
+  getMyTours,
 };

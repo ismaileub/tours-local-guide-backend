@@ -23,6 +23,7 @@ const userSchema = new Schema<IUser>(
       default: Role.TOURIST,
     },
     phone: { type: String },
+    pricePerHour: { type: Number },
     picture: { type: String },
     address: { type: String },
     isDeleted: { type: Boolean, default: false },

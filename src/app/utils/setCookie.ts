@@ -13,6 +13,7 @@ export const setAuthCookie = (res: Response, tokenInfo: AuthTokens) => {
       httpOnly: true,
       secure: isProduction,
       sameSite: isProduction ? "none" : "lax",
+      path: "/",
     });
   }
 
@@ -21,6 +22,7 @@ export const setAuthCookie = (res: Response, tokenInfo: AuthTokens) => {
       httpOnly: true,
       secure: isProduction,
       sameSite: isProduction ? "none" : "lax",
+      path: "/",
     });
   }
 };

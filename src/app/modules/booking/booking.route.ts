@@ -8,10 +8,10 @@ const router = Router();
 // Tourist books a tour
 router.post("/", checkAuth(Role.TOURIST), BookingControllers.createBooking);
 
-// Guide marks booking as completed
+// Update booking status
 router.patch(
-  "/:id/complete",
-  checkAuth(Role.GUIDE),
+  "/:id",
+  checkAuth(Role.GUIDE, Role.TOURIST),
   BookingControllers.completeBooking
 );
 

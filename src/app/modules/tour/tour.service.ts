@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request } from "express";
 import { JwtPayload } from "jsonwebtoken";
 import AppError from "../../errorHelpers/AppError";
@@ -82,8 +83,47 @@ const deleteTour = async (req: Request, user: JwtPayload) => {
   return true;
 };
 
+const getTourById = async (req: Request) => {
+  const { id } = req.params;
+
+  const tour = await Tour.findById(id).populate("guide", "name email");
+
+  if (!tour) {
+    throw new AppError(404, "Tour not found");
+  }
+
+  return tour;
+};
+
+const getAllTours = async (req: Request) => {
+  const { tourType } = req.query;
+
+  const filter: any = {};
+
+  if (tourType) {
+    filter.tourType = tourType;
+  }
+
+  const tours = await Tour.find(filter).populate("guide", "name email picture");
+
+  return tours;
+};
+
+const getMyTours = async (user: JwtPayload) => {
+  if (user.role !== "GUIDE") {
+    throw new AppError(403, "Only guides can view their tours");
+  }
+
+  const tours = await Tour.find({ guide: user.userId });
+
+  return tours;
+};
+
 export const TourServices = {
   createTour,
   deleteTour,
   updateTour,
+  getTourById,
+  getAllTours,
+  getMyTours,
 };

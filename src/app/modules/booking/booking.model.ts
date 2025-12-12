@@ -5,7 +5,7 @@ export interface IBooking {
   tourId: Types.ObjectId;
   guideId: Types.ObjectId;
   touristId: Types.ObjectId;
-  status: "PENDING" | "COMPLETED";
+  status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
   paymentStatus: "UNPAID" | "PAID";
   paymentId?: string;
   createdAt: Date;
@@ -19,7 +19,7 @@ const bookingSchema = new Schema<IBooking>(
     touristId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     status: {
       type: String,
-      enum: ["PENDING", "COMPLETED"],
+      enum: ["PENDING", "COMPLETED", "CONFIRMED", "CANCELLED"],
       default: "PENDING",
     },
     paymentStatus: {
