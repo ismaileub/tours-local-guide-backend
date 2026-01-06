@@ -108,6 +108,7 @@ const getSingleBookingByTouristIdAndTargetId = async (
   let booking = await Booking.findOne({
     touristId: user.userId,
     guideId: id,
+    status: "COMPLETED",
     bookingType: "GUIDE_HIRE",
   }).populate("touristId", "name email phone");
 
@@ -116,6 +117,7 @@ const getSingleBookingByTouristIdAndTargetId = async (
     booking = await Booking.findOne({
       touristId: user.userId,
       tourId: id,
+      status: "COMPLETED",
       bookingType: "TOUR_PACKAGE",
     }).populate("touristId", "name email phone");
   }
@@ -369,7 +371,10 @@ const updateBookingStatus = async (req: Request, user: JwtPayload) => {
         throw new AppError(400, "Cannot complete booking before confirmed");
       }
       if (booking.tourDate > now) {
-        throw new AppError(400, "Cannot complete booking before tour date");
+        throw new AppError(
+          400,
+          "Cannot complete booking before tour date and time"
+        );
       }
       booking.status = "COMPLETED";
       // booking.completedAt = now;
