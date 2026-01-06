@@ -574,7 +574,7 @@ const getBookingsNeedPayment = async (userId: string) => {
     touristId: userId,
     status: "COMPLETED",
     paymentStatus: { $ne: "PAID" },
-  });
+  }).sort({ createdAt: -1 });
 
   return bookings;
 };

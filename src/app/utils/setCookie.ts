@@ -11,8 +11,8 @@ export const setAuthCookie = (res: Response, tokenInfo: AuthTokens) => {
   if (tokenInfo.accessToken) {
     res.cookie("accessToken", tokenInfo.accessToken, {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? "none" : "lax",
+      secure: isProduction, // true in production, false in dev
+      sameSite: isProduction ? "none" : "lax", // cross-site in production, lax in dev
       path: "/",
     });
   }
