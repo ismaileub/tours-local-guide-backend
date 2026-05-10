@@ -157,10 +157,4 @@ backend/
 
 ---
 
-## 🙌 Author
 
-**Your Name**
-
-- GitHub: [https://github.com/your-username](https://github.com/your-username)
-- Email: [your-email@example.com](mailto:your-email@example.com)
--
