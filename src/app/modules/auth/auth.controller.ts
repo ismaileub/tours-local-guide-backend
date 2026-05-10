@@ -11,6 +11,8 @@ import { sendResponse } from "../../utils/sendResponse";
 import { setAuthCookie } from "../../utils/setCookie";
 import { createUserTokens } from "../../utils/userTokens";
 import { AuthServices } from "./auth.service";
+import { User } from "../user/user.model";
+import { Role } from "../user/user.interface";
 
 const credentialsLogin = catchAsync(async (req: Request, res: Response) => {
   const { user, tokens } = await AuthServices.credentialsLogin(req.body);
@@ -34,11 +36,11 @@ const getNewAccessToken = catchAsync(
     if (!refreshToken) {
       throw new AppError(
         httpStatus.BAD_REQUEST,
-        "No refresh token recieved from cookies"
+        "No refresh token recieved from cookies",
       );
     }
     const tokenInfo = await AuthServices.getNewAccessToken(
-      refreshToken as string
+      refreshToken as string,
     );
 
     setAuthCookie(res, tokenInfo);
@@ -49,31 +51,48 @@ const getNewAccessToken = catchAsync(
       message: "New Access Token Retrived Successfully",
       data: tokenInfo,
     });
-  }
+  },
 );
 
-const googleCallbackController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {
-    let redirectTo = req.query.state ? (req.query.state as string) : "";
+const googleLogin = catchAsync(async (req: Request, res: Response) => {
+  const { email, name, picture } = req.body;
 
-    if (redirectTo.startsWith("/")) {
-      redirectTo = redirectTo.slice(1);
-    }
-
-    // /booking => booking , => "/" => ""
-    const user = req.user;
-
-    if (!user) {
-      throw new AppError(httpStatus.NOT_FOUND, "User Not Found");
-    }
-
-    const tokenInfo = createUserTokens(user);
-
-    setAuthCookie(res, tokenInfo);
-
-    res.redirect(`${envVars.FRONTEND_URL}/${redirectTo}`);
+  if (!email) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Google email not found");
   }
-);
+
+  let user = await User.findOne({ email });
+
+  // first time google login
+  if (!user) {
+    user = await User.create({
+      name,
+      email,
+      picture,
+      role: Role.TOURIST,
+      auths: [
+        {
+          provider: "google",
+          providerId: email,
+        },
+      ],
+    });
+  }
+
+  const tokens = await createUserTokens(user);
+
+  const { password, ...userWithoutPassword } = user.toObject();
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Google login successful",
+    data: {
+      ...userWithoutPassword,
+      accessToken: tokens.accessToken,
+    },
+  });
+});
 
 const logout = catchAsync(async (req: Request, res: Response) => {
   res.clearCookie("accessToken", {
@@ -103,5 +122,5 @@ export const AuthControllers = {
   credentialsLogin,
   getNewAccessToken,
   logout,
-  googleCallbackController,
+  googleLogin,
 };

@@ -17,10 +17,12 @@ export const checkAuth =
         throw new AppError(httpStatus.FORBIDDEN, "No token received");
       }
 
+      console.log({ accessToken });
+
       // Verify token
       const decoded = verifyToken(
         accessToken,
-        envVars.JWT_ACCESS_SECRET
+        envVars.JWT_ACCESS_SECRET,
       ) as JwtPayload;
 
       // Check if user exists in DB
@@ -32,7 +34,7 @@ export const checkAuth =
       if (!authRoles.includes(decoded.role)) {
         throw new AppError(
           httpStatus.FORBIDDEN,
-          "You are not permitted to view this route!"
+          "You are not permitted to view this route!",
         );
       }
 

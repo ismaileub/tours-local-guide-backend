@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from "express";
 import { PaymentService } from "./payment.service";
-import { sendResponse } from "../../../utils/sendResponse";
+import { sendResponse } from "../../utils/sendResponse";
 import httpStatus from "http-status-codes";
-import { catchAsync } from "../../../utils/catchAsync";
-import { Booking } from "../booking.model";
+import { catchAsync } from "../../utils/catchAsync";
+import { Booking } from "../booking/booking.model";
 
 /**
  * Create Stripe Payment Intent (Individual booking payment)
@@ -31,7 +31,7 @@ const createPaymentIntent = catchAsync(async (req: Request, res: Response) => {
   }
 
   const paymentIntent = await PaymentService.createPaymentIntent(
-    booking.totalPrice
+    booking.totalPrice,
   );
 
   sendResponse(res, {
@@ -51,7 +51,7 @@ const savePayment = catchAsync(async (req: Request, res: Response) => {
   const { bookingId, transactionId } = req.body;
   const booking = (await Booking.findById(bookingId).populate(
     "touristId",
-    "name email phone"
+    "name email phone",
   )) as unknown as {
     touristId: { name: string; email: string; phone: string };
     totalPrice: number;
@@ -94,11 +94,29 @@ const getPaymentByBookingId = catchAsync(
       message: "Payment retrieved successfully",
       data: payment,
     });
-  }
+  },
+);
+
+const getAllPaymentsForAdmin = catchAsync(
+  async (req: Request, res: Response) => {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+
+    const result = await PaymentService.getAllPaymentsForAdmin(page, limit);
+
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Payment history retrieved",
+      meta: result.meta,
+      data: result.data,
+    });
+  },
 );
 
 export const PaymentController = {
   createPaymentIntent,
   savePayment,
   getPaymentByBookingId,
+  getAllPaymentsForAdmin,
 };

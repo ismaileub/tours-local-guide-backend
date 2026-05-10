@@ -16,7 +16,7 @@ const adminSummary = async () => {
 
   const totalRevenue = completedBookings.reduce(
     (sum, booking) => sum + (booking.totalPrice || 0),
-    0
+    0,
   );
 
   return {

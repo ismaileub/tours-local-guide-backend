@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { Payment, IPayment } from "./payment.model";
-import { envVars } from "../../../config/env";
-import { Booking } from "../booking.model";
+import { envVars } from "../../config/env";
+import { Booking } from "../booking/booking.model";
 
 const stripe = new Stripe(envVars.STRIPE_SECRET_KEY, {
   apiVersion: "2025-11-17.clover",
@@ -57,9 +57,42 @@ const getPaymentByBookingId = async (bookingId: string) => {
   return payment;
 };
 
+const getAllPaymentsForAdmin = async (page = 1, limit = 10) => {
+  const skip = (page - 1) * limit;
+
+  const payments = await Payment.find()
+    .sort({ paymentDate: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  const total = await Payment.countDocuments();
+  const totalMoneyResult = await Payment.aggregate([
+    {
+      $group: {
+        _id: null,
+        totalAmount: { $sum: "$amount" },
+      },
+    },
+  ]);
+
+  const totalMoney = totalMoneyResult[0]?.totalAmount || 0;
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+      totalMoney,
+    },
+    data: payments,
+  };
+};
+
 export const PaymentService = {
   getBookingById,
   createPaymentIntent,
   savePayment,
   getPaymentByBookingId,
+  getAllPaymentsForAdmin,
 };

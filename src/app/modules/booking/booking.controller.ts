@@ -50,7 +50,7 @@ const getAllBookingsOfLoggedInUser = catchAsync(
     const result = await BookingServices.getAllBookingsOfLoggedInUser(
       user,
       page,
-      limit
+      limit,
     );
 
     sendResponse(res, {
@@ -60,7 +60,7 @@ const getAllBookingsOfLoggedInUser = catchAsync(
       data: result.data,
       meta: result.meta,
     });
-  }
+  },
 );
 const getAllBookings = catchAsync(async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
@@ -89,7 +89,7 @@ const getPendingBookingsForGuide = catchAsync(
       data: result.data,
       meta: result.meta,
     });
-  }
+  },
 );
 
 const getConfirmedAndCompleteBookingsForGuide = catchAsync(
@@ -99,6 +99,8 @@ const getConfirmedAndCompleteBookingsForGuide = catchAsync(
     const result =
       await BookingServices.getConfirmedAndCompleteBookingsForGuide(req, user);
 
+    console.log(result);
+
     sendResponse(res, {
       success: true,
       statusCode: 200,
@@ -106,7 +108,7 @@ const getConfirmedAndCompleteBookingsForGuide = catchAsync(
       data: result.data,
       meta: result.meta,
     });
-  }
+  },
 );
 
 const getSingleBookingByTouristIdAndTargetId = catchAsync(
@@ -122,7 +124,7 @@ const getSingleBookingByTouristIdAndTargetId = catchAsync(
       message: "Booking retrieved successfully",
       data: booking,
     });
-  }
+  },
 );
 
 const getBookingsNeedPayment = catchAsync(
@@ -137,7 +139,7 @@ const getBookingsNeedPayment = catchAsync(
       message: "Bookings that need payment retrieved successfully",
       data: bookings,
     });
-  }
+  },
 );
 
 const getAllUnpaidBookingsOfGuide = catchAsync(
@@ -152,7 +154,7 @@ const getAllUnpaidBookingsOfGuide = catchAsync(
       message: "Unpaid bookings retrieved successfully",
       data: bookings,
     });
-  }
+  },
 );
 
 const getPaidBookings = catchAsync(async (req: Request, res: Response) => {

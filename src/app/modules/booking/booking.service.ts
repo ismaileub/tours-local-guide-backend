@@ -8,6 +8,14 @@ import { User } from "../user/user.model";
 import { StatusCodes } from "http-status-codes";
 import { PipelineStage } from "mongoose";
 
+interface BookingWithGuide {
+  guideId?: any;
+  tourId?: any;
+  bookingType: "GUIDE_HIRE" | "TOUR_PACKAGE";
+  status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
+  createdAt: Date;
+}
+
 // Create a booking (tour package or guide hire)
 const createBooking = async (req: Request, user: JwtPayload) => {
   if (user.role !== "TOURIST") {
@@ -39,7 +47,7 @@ const createBooking = async (req: Request, user: JwtPayload) => {
     if (!guideId || !hourlyRate || !hours) {
       throw new AppError(
         400,
-        "guideId, hourlyRate, and hours are required for GUIDE_HIRE"
+        "guideId, hourlyRate, and hours are required for GUIDE_HIRE",
       );
     }
 
@@ -69,34 +77,65 @@ const createBooking = async (req: Request, user: JwtPayload) => {
 };
 
 // Get single booking by id
+
 const getBookingById = async (req: Request, user: JwtPayload) => {
   const { id } = req.params;
 
-  const booking = await Booking.findById(id).populate(
-    "touristId",
-    "name email phone"
-  );
+  // Step 1: Fetch booking with populated fields
+  const booking = await Booking.findById(id)
+    .populate("touristId", "name email phone")
+    .populate("guideId", "name email phone picture")
+    .populate({
+      path: "tourId",
+      select: "title guide",
+      populate: {
+        path: "guide",
+        select: "name email phone picture",
+      },
+    });
 
   if (!booking) {
     throw new AppError(404, "Booking not found");
   }
 
-  // 🔐 Authorization
+  // Step 2: Extract IDs safely
+  const touristId = (booking.touristId as any)?._id?.toString();
+  const directGuideId = (booking.guideId as any)?._id?.toString();
+  const tourGuideId = (booking.tourId as any)?.guide?._id?.toString();
+
+  // Step 3: Authorization
   if (
-    booking.touristId._id.toString() !== user.userId
-    // &&
-    // booking.guideId?._id?.toString() !== user.userId &&
-    // user.role !== "ADMIN"
+    touristId !== user.userId &&
+    directGuideId !== user.userId &&
+    tourGuideId !== user.userId &&
+    user.role !== "ADMIN"
   ) {
     throw new AppError(403, "You are not allowed to view this booking");
   }
 
-  return booking;
+  // Step 4: Normalize guide field for frontend
+  const guide =
+    booking.bookingType === "GUIDE_HIRE"
+      ? booking.guideId
+      : (booking.tourId as any)?.guide;
+
+  // Step 5: Convert to plain object
+  const bookingObj: any = booking.toObject();
+  bookingObj.guide = guide; // top-level guide
+
+  // Remove nested or duplicate guide references
+  if (bookingObj.bookingType === "GUIDE_HIRE") {
+    delete bookingObj.guideId; // remove duplicate guide
+  } else if (bookingObj.tourId) {
+    delete bookingObj.tourId.guide; // remove nested guide in TOUR_PACKAGE
+  }
+
+  return bookingObj;
 };
 
 const getSingleBookingByTouristIdAndTargetId = async (
   req: Request,
-  user: JwtPayload
+  user: JwtPayload,
 ) => {
   const { id } = req.params;
 
@@ -133,7 +172,7 @@ const getSingleBookingByTouristIdAndTargetId = async (
 const getAllBookingsOfLoggedInUser = async (
   user: JwtPayload,
   page = 1,
-  limit = 8
+  limit = 8,
 ) => {
   const skip = (page - 1) * limit;
 
@@ -321,7 +360,7 @@ const updateBookingStatus = async (req: Request, user: JwtPayload) => {
       if (booking.status === "CONFIRMED" || booking.status === "COMPLETED") {
         throw new AppError(
           400,
-          "Can not cancel after booking is confirmed or completed"
+          "Can not cancel after booking is confirmed or completed",
         );
       }
       booking.status = "CANCELLED";
@@ -357,7 +396,7 @@ const updateBookingStatus = async (req: Request, user: JwtPayload) => {
       if (booking.status === "CONFIRMED" || booking.status === "COMPLETED") {
         throw new AppError(
           400,
-          "Can not cancel after confirmation or complete"
+          "Can not cancel after confirmation or complete",
         );
       }
       booking.status = "CANCELLED";
@@ -373,7 +412,7 @@ const updateBookingStatus = async (req: Request, user: JwtPayload) => {
       if (booking.tourDate > now) {
         throw new AppError(
           400,
-          "Cannot complete booking before tour date and time"
+          "Cannot complete booking before tour date and time",
         );
       }
       booking.status = "COMPLETED";
@@ -429,7 +468,7 @@ const getPendingBookingsForGuide = async (req: Request, user: JwtPayload) => {
   const finalBookings = bookings.filter(
     (b) =>
       b.bookingType === "GUIDE_HIRE" ||
-      (b.bookingType === "TOUR_PACKAGE" && b.tourId)
+      (b.bookingType === "TOUR_PACKAGE" && b.tourId),
   );
 
   return {
@@ -442,59 +481,56 @@ const getPendingBookingsForGuide = async (req: Request, user: JwtPayload) => {
     },
   };
 };
+
+//
+
 // const getConfirmedAndCompleteBookingsForGuide = async (
 //   req: Request,
-//   user: JwtPayload
+//   user: JwtPayload,
 // ) => {
 //   const page = Number(req.query.page || 1);
 //   const limit = Number(req.query.limit || 10);
 //   const skip = (page - 1) * limit;
 
-//   // Step 1: Get all GUIDE_HIRE bookings for this guide
+//   // 1️⃣ find tours created by this guide
+//   const guideTours = await Tour.find({ guide: user.userId }, { _id: 1 });
+
+//   const tourIds = guideTours.map((t) => t._id);
+
+//   // 2️⃣ filters
 //   const guideHireFilter = {
 //     bookingType: "GUIDE_HIRE",
 //     guideId: user.userId,
-//     status: { $in: ["COMPLETED", "CONFIRMED"] },
+//     status: { $in: ["CONFIRMED", "COMPLETED"] },
 //   };
 
-//   // Step 2: Get TOUR_PACKAGE bookings where the guide matches
 //   const tourPackageFilter = {
 //     bookingType: "TOUR_PACKAGE",
-//     status: { $in: ["COMPLETED", "CONFIRMED"] },
+//     tourId: { $in: tourIds },
+//     status: { $in: ["CONFIRMED", "COMPLETED"] },
 //   };
 
-//   // Count documents for pagination
-//   const totalGuideHire = await Booking.countDocuments(guideHireFilter);
-//   const totalTourPackage = await Booking.countDocuments({
-//     ...tourPackageFilter,
-//     tourId: { $exists: true }, // will filter later in code
-//   });
-
-//   const total = totalGuideHire + totalTourPackage;
-
-//   // Step 3: Fetch bookings with pagination
-//   const bookings = await Booking.find({
+//   const finalFilter = {
 //     $or: [guideHireFilter, tourPackageFilter],
-//   })
+//   };
+
+//   // 3️⃣ total (now 100% correct)
+//   const total = await Booking.countDocuments(finalFilter);
+
+//   // 4️⃣ fetch bookings
+//   const bookings = await Booking.find(finalFilter)
 //     .populate("touristId", "name email phone picture")
 //     .populate("guideId", "name email")
-//     .populate({
-//       path: "tourId",
-//       match: { guide: user.userId }, // only guide's tours
+//     .populate("tourId")
+//     .sort({
+//       status: 1, // CONFIRMED first
+//       createdAt: -1,
 //     })
-//     .sort({ createdAt: -1 })
 //     .skip(skip)
 //     .limit(limit);
 
-//   // Step 4: Filter out TOUR_PACKAGE that are not for this guide
-//   const finalBookings = bookings.filter(
-//     (b) =>
-//       b.bookingType === "GUIDE_HIRE" ||
-//       (b.bookingType === "TOUR_PACKAGE" && b.tourId)
-//   );
-
 //   return {
-//     data: finalBookings,
+//     data: bookings,
 //     meta: {
 //       page,
 //       limit,
@@ -503,68 +539,76 @@ const getPendingBookingsForGuide = async (req: Request, user: JwtPayload) => {
 //     },
 //   };
 // };
+
 const getConfirmedAndCompleteBookingsForGuide = async (
   req: Request,
-  user: JwtPayload
+  user: JwtPayload,
 ) => {
   const page = Number(req.query.page || 1);
   const limit = Number(req.query.limit || 10);
-  const skip = (page - 1) * limit;
 
-  const guideHireFilter = {
-    bookingType: "GUIDE_HIRE",
-    guideId: user.userId,
-    status: { $in: ["COMPLETED", "CONFIRMED"] },
+  const guideTours = await Tour.find({ guide: user.userId }, { _id: 1 });
+  const tourIds = guideTours.map((t) => t._id);
+
+  const finalFilter = {
+    $or: [
+      {
+        bookingType: "GUIDE_HIRE",
+        guideId: user.userId,
+        status: { $in: ["CONFIRMED", "COMPLETED"] },
+      },
+      {
+        bookingType: "TOUR_PACKAGE",
+        tourId: { $in: tourIds },
+        status: { $in: ["CONFIRMED", "COMPLETED"] },
+      },
+    ],
   };
 
-  const tourPackageFilter = {
-    bookingType: "TOUR_PACKAGE",
-    status: { $in: ["COMPLETED", "CONFIRMED"] },
-  };
-
-  const totalGuideHire = await Booking.countDocuments(guideHireFilter);
-  const totalTourPackage = await Booking.countDocuments({
-    ...tourPackageFilter,
-    tourId: { $exists: true },
-  });
-
-  const total = totalGuideHire + totalTourPackage;
-
-  // Fetch bookings
-  const bookings = await Booking.find({
-    $or: [guideHireFilter, tourPackageFilter],
-  })
+  /**
+   * Type '(FlattenMaps<{ _id?: ObjectId | undefined; bookingType: "GUIDE_HIRE" | "TOUR_PACKAGE"; tourId?: ObjectId | undefined; guideId?: ObjectId | undefined; hourlyRate?: number | undefined; ... 8 more ...; statusHistory: { ...; }[]; }> & Required<...> & { ...; })[]' is not assignable to type 'BookingWithGuide[]'.
+  Type 'FlattenMaps<{ _id?: ObjectId | undefined; bookingType: "GUIDE_HIRE" | "TOUR_PACKAGE"; tourId?: ObjectId | undefined; guideId?: ObjectId | undefined; hourlyRate?: number | undefined; ... 8 more ...; statusHistory: { ...; }[]; }> & Required<...> & { ...; }' is not assignable to type 'BookingWithGuide'.
+    Types of property 'createdAt' are incompatible.
+      Type 'Date' is not assignable to type 'string'.ts(2322)
+let bookings: BookingWithGuide[]
+   */
+  let bookings: BookingWithGuide[] = await Booking.find(finalFilter)
     .populate("touristId", "name email phone picture")
-    .populate("guideId", "name email")
+    .populate("guideId", "name email phone picture")
     .populate({
       path: "tourId",
-      match: { guide: user.userId },
+      populate: { path: "guide", select: "name email phone picture" },
     })
-    .sort({
-      // Custom sorting: CONFIRMED first, COMPLETED later, then newest first
-      status: 1, // We'll handle it manually after fetching
-      createdAt: -1,
-    })
-    .skip(skip)
-    .limit(limit);
+    .lean();
 
-  // Filter TOUR_PACKAGE not for this guide
-  const finalBookings = bookings.filter(
-    (b) =>
-      b.bookingType === "GUIDE_HIRE" ||
-      (b.bookingType === "TOUR_PACKAGE" && b.tourId)
-  );
+  // Normalize guide field safely
+  bookings = bookings.map((b) => {
+    const guide =
+      b.bookingType === "GUIDE_HIRE"
+        ? b.guideId
+        : (b.tourId as any)?.guide || null; // cast to any to avoid TS error
 
-  // Sort manually by status: CONFIRMED first, COMPLETED last
-  finalBookings.sort((a, b) => {
-    const order: Record<string, number> = { CONFIRMED: 0, COMPLETED: 1 };
-    const aOrder = order[a.status] ?? 2; // unknown statuses get lowest priority
-    const bOrder = order[b.status] ?? 2;
-    return aOrder - bOrder;
+    if (b.bookingType === "GUIDE_HIRE") delete b.guideId;
+    if (b.tourId && typeof b.tourId === "object")
+      delete (b.tourId as any).guide;
+
+    return { ...b, guide };
   });
 
+  // Custom sort
+  const statusOrder: Record<string, number> = { CONFIRMED: 0, COMPLETED: 1 };
+  bookings.sort((a, b) => {
+    const diff = (statusOrder[a.status] ?? 2) - (statusOrder[b.status] ?? 2);
+    // '?? 2' ensures PENDING/CANCELLED go after CONFIRMED/COMPLETED
+    if (diff !== 0) return diff;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+
+  const total = bookings.length;
+  const paginated = bookings.slice((page - 1) * limit, page * limit);
+
   return {
-    data: finalBookings,
+    data: paginated,
     meta: {
       page,
       limit,
@@ -618,7 +662,7 @@ const getAllUnpaidBookingsOfGuide = async (user: JwtPayload) => {
 
   if (user.role === "TOURIST") {
     filteredBookings = bookings.filter(
-      (booking) => booking.touristId.toString() === user.userId
+      (booking) => booking.touristId.toString() === user.userId,
     );
   }
 

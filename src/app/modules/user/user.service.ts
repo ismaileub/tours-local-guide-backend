@@ -75,7 +75,7 @@ const createUser = async (payload: Partial<IUser>) => {
 const updateUser = async (req: Request, user: JwtPayload) => {
   const userId = user.userId;
   const payload = { ...req.body };
-  console.log({ payload });
+  //console.log({ payload });
 
   const existingUser = await User.findById(userId);
 
@@ -282,6 +282,7 @@ const getAllGuides = async (
       $project: {
         name: 1,
         address: 1,
+        languages: 1,
         picture: 1,
         pricePerHour: 1,
         bio: 1,
